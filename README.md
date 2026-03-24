@@ -3,7 +3,7 @@
 A lightweight custom element for **Kontent.ai** that helps editors generate crop URLs from a selected image using either:
 
 - **Focal Point Crop** (manual focus selection), or
-- **Smart Crop** (service-driven smart cropping).
+- **Smart Crop** (AI-driven smart cropping).
 
 It provides a visual workflow for selecting focal points, previewing common aspect ratios, and saving ready-to-use transformed asset URLs into the custom element value.
 
