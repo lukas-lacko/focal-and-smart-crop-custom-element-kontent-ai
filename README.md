@@ -11,7 +11,7 @@ It provides a visual workflow for selecting focal points, previewing common aspe
 
 - Loads an image from:
   - direct URL input, or
-  - Kontent.ai asset picker (`CustomElement.selectAssets`).
+  - Kontent.ai asset picker).
 - Supports two crop modes:
   - **Focal Point Crop**: click image to define focus coordinates.
   - **Smart Crop**: generates smart-crop URLs (`fit=crop&crop=smart`).
