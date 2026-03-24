@@ -1,0 +1,1272 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://app.kontent.ai/js-api/custom-element/v1/custom-element.min.js"></script>
+  <title>Focal Point & Smart Crop Custom Element</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      line-height: 1.4;
+      padding: 0;
+      background: #f5f7fb;
+      color: #1f2937;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: 18px;
+    }
+
+    .controls {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .app {
+      padding: 16px;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    .disabled_overlay {
+      position: fixed;
+      background-color: #777;
+      z-index: 10;
+      cursor: not-allowed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0.12;
+      display: none;
+    }
+
+    .save-status {
+      font-size: 11px;
+      color: #666;
+      transition: all 0.3s;
+      margin-top: 0;
+    }
+
+    .url-input {
+      width: 100%;
+      padding: 8px;
+      font-size: 14px;
+      box-sizing: border-box;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      background: #ffffff;
+      color: #111827;
+    }
+
+    .control-label {
+      font-size: 14px;
+      color: #1f2937;
+    }
+
+    .toggle-group {
+      display: inline-flex;
+      gap: 6px;
+      padding: 4px;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      background: #f8fafc;
+      width: fit-content;
+    }
+
+    .toggle-option {
+      min-width: 132px;
+      padding: 8px 12px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: transparent;
+      color: #334155;
+      font-weight: 600;
+    }
+
+    .toggle-option.active {
+      background: #ffffff;
+      border-color: #93c5fd;
+      color: #0f172a;
+      box-shadow: 0 1px 1px rgba(15, 23, 42, 0.08);
+    }
+
+    button {
+      padding: 8px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #ffffff;
+      color: #111827;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #f8fafc;
+      border-color: #94a3b8;
+    }
+
+    .image-wrap {
+      position: relative;
+      display: inline-block;
+      max-width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: default;
+      margin-bottom: 16px;
+      background: #ffffff;
+    }
+
+    .image-layout {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .preset-visualizer {
+      min-width: 220px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      background: #ffffff;
+      padding: 10px;
+    }
+
+    .preset-visualizer h3 {
+      margin: 0 0 8px;
+      font-size: 14px;
+      color: #334155;
+    }
+
+    .preset-toggle-list {
+      display: grid;
+      gap: 6px;
+    }
+
+    .preset-toggle {
+      text-align: left;
+      width: 100%;
+      border-radius: 8px;
+      background: #f8fafc;
+      border: 1px solid #dbe3ee;
+      transition: all 120ms ease;
+    }
+
+    .preset-toggle.active {
+      background: #eff6ff;
+      border-color: #93c5fd;
+      color: #1e3a8a;
+    }
+
+    .preset-toggle-hint {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .preset-custom-fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .preset-custom-fields input {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      font-size: 12px;
+    }
+
+    #sourceImage {
+      max-width: 100%;
+      display: block;
+      height: auto;
+    }
+
+    .focal-marker {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid #ffffff;
+      background: #ef4444;
+      box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.45);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      display: none;
+    }
+
+    .crop-guide {
+      position: absolute;
+      border: 2px solid rgba(37, 99, 235, 0.95);
+      background: rgba(37, 99, 235, 0.12);
+      border-radius: 4px;
+      pointer-events: none;
+      display: none;
+    }
+
+    .crop-guide.resizable {
+      pointer-events: auto;
+    }
+
+    .crop-guide-handle {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1px solid #1d4ed8;
+      background: #ffffff;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.3);
+      display: none;
+    }
+
+    .crop-guide.resizable .crop-guide-handle {
+      display: block;
+    }
+
+    .crop-guide-handle[data-corner="nw"] {
+      left: -7px;
+      top: -7px;
+      cursor: nwse-resize;
+    }
+
+    .crop-guide-handle[data-corner="ne"] {
+      right: -7px;
+      top: -7px;
+      cursor: nesw-resize;
+    }
+
+    .crop-guide-handle[data-corner="sw"] {
+      left: -7px;
+      bottom: -7px;
+      cursor: nesw-resize;
+    }
+
+    .crop-guide-handle[data-corner="se"] {
+      right: -7px;
+      bottom: -7px;
+      cursor: nwse-resize;
+    }
+
+    .crop-guide-handle[data-edge="n"] {
+      left: 50%;
+      top: -7px;
+      transform: translateX(-50%);
+      cursor: ns-resize;
+    }
+
+    .crop-guide-handle[data-edge="s"] {
+      left: 50%;
+      bottom: -7px;
+      transform: translateX(-50%);
+      cursor: ns-resize;
+    }
+
+    .crop-guide-handle[data-edge="w"] {
+      left: -7px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: ew-resize;
+    }
+
+    .crop-guide-handle[data-edge="e"] {
+      right: -7px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: ew-resize;
+    }
+
+    .status {
+      margin: 0;
+      font-size: 14px;
+      color: #475569;
+    }
+
+    .focal-coords {
+      margin: 0;
+      font-size: 12px;
+      color: #475569;
+    }
+
+    .message-stack {
+      display: grid;
+      gap: 4px;
+      margin: 2px 0 6px;
+    }
+
+    .coords-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .results {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 10px;
+      background: #ffffff;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    }
+
+    .card h3 {
+      margin: 0 0 8px;
+      font-size: 16px;
+    }
+
+    .card a {
+      display: block;
+      word-break: break-all;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .preview {
+      width: 100%;
+      height: 100%;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      display: block;
+      background: #f8fafc;
+      object-fit: contain;
+    }
+
+    .preview-shell {
+      width: 100%;
+      height: 260px;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #f8fafc;
+    }
+  </style>
+</head>
+<body>
+  <div class="disabled_overlay"></div>
+
+  <div class="app">
+  <h1>Focal Point & Smart Crop Custom Element</h1>
+
+  <div class="controls">
+    <label for="assetUrl">Asset URL</label>
+    <input
+      id="assetUrl"
+      class="url-input"
+      type="url"
+      value="https://assets-us-01.kc-usercontent.com:443/8d20758c-d74c-4f59-ae04-ee928c0816b7/6e38c039-ad00-47f3-a584-26252827655a/daylight.jpg"
+    />
+    <button id="loadBtn" type="button">Load image</button>
+    <button id="selectAssetBtn" type="button">Select image from Kontent</button>
+    <div class="message-stack">
+      <div id="status" class="status">
+        Load an image, click to set focal point, then generate crop previews.
+      </div>
+      <div class="coords-row">
+        <div id="focalCoords" class="focal-coords"></div>
+        <div id="saveStatus" class="save-status"></div>
+      </div>
+    </div>
+    <span class="control-label">Crop mode</span>
+    <div id="cropModeToggle" class="toggle-group" role="group" aria-label="Crop mode">
+      <button type="button" class="toggle-option" data-crop-mode="focal" aria-pressed="true">Focal Point Crop</button>
+      <button type="button" class="toggle-option" data-crop-mode="smart" aria-pressed="false">Smart Crop</button>
+    </div>
+  </div>
+
+  <div class="image-layout">
+    <div id="imageWrap" class="image-wrap" title="Click image to select focal point">
+      <img id="sourceImage" alt="Source asset" />
+      <div id="focalMarker" class="focal-marker" aria-hidden="true"></div>
+      <div id="cropGuide" class="crop-guide" aria-hidden="true">
+        <div class="crop-guide-handle" data-corner="nw"></div>
+        <div class="crop-guide-handle" data-corner="ne"></div>
+        <div class="crop-guide-handle" data-corner="sw"></div>
+        <div class="crop-guide-handle" data-corner="se"></div>
+        <div class="crop-guide-handle" data-edge="n"></div>
+        <div class="crop-guide-handle" data-edge="s"></div>
+        <div class="crop-guide-handle" data-edge="w"></div>
+        <div class="crop-guide-handle" data-edge="e"></div>
+      </div>
+    </div>
+    <aside class="preset-visualizer" aria-label="Preset crop visualizer">
+      <h3>Preset crop visualizer</h3>
+      <div id="presetToggleList" class="preset-toggle-list"></div>
+      <div id="presetToggleHint" class="preset-toggle-hint">
+        Select a preset to display its crop frame on the main image.
+      </div>
+    </aside>
+  </div>
+
+  <div id="results" class="results"></div>
+  </div>
+
+  <script>
+    const RATIOS = [
+      { name: "16:9 (Landscape)", ratio: 16 / 9 },
+      { name: "1:1 (Square)", ratio: 1 / 1 },
+      { name: "9:16 (Vertical)", ratio: 9 / 16 },
+      { name: "4:5 (Portrait)", ratio: 4 / 5 },
+      { name: "4:3 (Stable)", ratio: 4 / 3 },
+      { name: "2:1 (Panorama)", ratio: 2 / 1 },
+    ];
+    const PRESET_URL_KEYS = {
+      "16:9 (Landscape)": "assetUrlLandscape",
+      "1:1 (Square)": "assetUrlSquare",
+      "9:16 (Vertical)": "assetUrlVertical",
+      "4:5 (Portrait)": "assetUrlPortrait45",
+      "4:3 (Stable)": "assetUrlStable43",
+      "2:1 (Panorama)": "assetUrlPanorama",
+    };
+
+    const assetUrlInput = document.getElementById("assetUrl");
+    const loadBtn = document.getElementById("loadBtn");
+    const selectAssetBtn = document.getElementById("selectAssetBtn");
+    const imageWrap = document.getElementById("imageWrap");
+    const sourceImage = document.getElementById("sourceImage");
+    const status = document.getElementById("status");
+    const focalCoords = document.getElementById("focalCoords");
+    const saveStatus = document.getElementById("saveStatus");
+    const results = document.getElementById("results");
+    const focalMarker = document.getElementById("focalMarker");
+    const cropGuide = document.getElementById("cropGuide");
+    const presetToggleList = document.getElementById("presetToggleList");
+    const presetToggleHint = document.getElementById("presetToggleHint");
+    const cropModeToggle = document.getElementById("cropModeToggle");
+    const cropModeButtons = cropModeToggle
+      ? Array.from(cropModeToggle.querySelectorAll("[data-crop-mode]"))
+      : [];
+
+    // ═══════════════════════════════════════════════
+    //  Kontent.ai Custom Element integration
+    // ═══════════════════════════════════════════════
+    let isCustomElement = false;
+    let saveTimeout = null;
+    let lastPresetWH = {};
+    let lastCustomWH = null;
+    let customWValue = 1080;
+    let customHValue = 1080;
+    let currentDisabled = false;
+    let focalPoint = null; // { x, y } in natural image pixels
+    let cropMode = "focal"; // focal | smart
+    let selectedGuidePreset = "off"; // off | custom | preset name
+    let customWFieldRef = null;
+    let customHFieldRef = null;
+    let refreshCustomPreviewFn = null;
+    let guideResizeState = null;
+    let lastSetHeight = 0;
+
+    const disabledOverlay = document.querySelector(".disabled_overlay");
+
+    function scheduleSave() {
+      if (!isCustomElement) return;
+      clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(() => {
+        try {
+          const baseUrl = assetUrlInput.value.trim();
+          const payload = {
+            assetUrl: baseUrl || null,
+            ...(cropMode === "focal" && focalPoint
+              ? { fX: focalPoint.x, fY: focalPoint.y }
+              : {}),
+            cropMode,
+          };
+
+          Object.keys(PRESET_URL_KEYS).forEach((presetName) => {
+            const key = PRESET_URL_KEYS[presetName];
+            const wh = lastPresetWH[presetName];
+            if (baseUrl && wh && wh.w && wh.h) {
+              payload[key] = buildCropUrl(baseUrl, wh.w, wh.h);
+            } else {
+              payload[key] = null;
+            }
+          });
+
+          if (baseUrl && lastCustomWH && lastCustomWH.w && lastCustomWH.h) {
+            payload.assetUrlCustom = buildCropUrl(baseUrl, lastCustomWH.w, lastCustomWH.h);
+          } else {
+            payload.assetUrlCustom = null;
+          }
+
+          CustomElement.setValue(JSON.stringify(payload));
+          if (saveStatus) {
+            saveStatus.textContent = "Saved";
+            setTimeout(() => {
+              saveStatus.textContent = "";
+            }, 1200);
+          }
+        } catch (e) {
+          // In case we are rendered outside of Kontent editor iframe.
+          console.warn("Could not save to Kontent.ai:", e);
+        }
+      }, 450);
+    }
+
+    function updateDisabled(disabled) {
+      currentDisabled = !!disabled;
+      if (disabledOverlay) {
+        disabledOverlay.style.display = disabled ? "block" : "none";
+      }
+      document.querySelectorAll("input, button").forEach((el) => {
+        el.disabled = !!disabled;
+      });
+    }
+
+    function updateSize() {
+      if (!isCustomElement) return;
+      let height = 300;
+      try {
+        const appEl = document.querySelector(".app");
+        const appHeight = appEl ? Math.ceil(appEl.getBoundingClientRect().height) : 0;
+        const fallbackHeight = Math.ceil(document.body.scrollHeight || document.documentElement.scrollHeight || 300);
+        // Small safety buffer to avoid temporary inner scrollbar flicker.
+        height = Math.max(300, (appHeight || fallbackHeight) + 24);
+      } catch (err) {}
+      if (Math.abs(height - lastSetHeight) <= 1) return;
+      try {
+        CustomElement.setHeight(height);
+        lastSetHeight = height;
+      } catch (e) {}
+    }
+
+    function parseStoredPayload(value) {
+      if (!value) return null;
+      try {
+        return JSON.parse(value);
+      } catch {
+        return null;
+      }
+    }
+
+    function extractWHFromUrl(urlString) {
+      try {
+        const url = new URL(urlString);
+        const rect = url.searchParams.get("rect");
+        if (rect) {
+          const parts = rect.split(",").map((v) => parseInt(v.trim(), 10));
+          if (parts.length === 4 && parts.every((n) => Number.isFinite(n))) {
+            const w = parsePositiveInt(parts[2]);
+            const h = parsePositiveInt(parts[3]);
+            if (w && h) return { w, h };
+          }
+        }
+        const wLegacy = parsePositiveInt(url.searchParams.get("w"));
+        const hLegacy = parsePositiveInt(url.searchParams.get("h"));
+        if (!wLegacy || !hLegacy) return null;
+        return { w: wLegacy, h: hLegacy };
+      } catch {
+        return null;
+      }
+    }
+
+    function initKontentCustomElement() {
+      if (!window.CustomElement || typeof CustomElement.init !== "function") {
+        return false;
+      }
+
+      try {
+        CustomElement.init(function (element) {
+          isCustomElement = true;
+
+          const stored = parseStoredPayload(element.value);
+          if (stored && typeof stored === "object") {
+            if (stored.assetUrl) assetUrlInput.value = stored.assetUrl;
+            if (stored.cropMode === "smart" || stored.cropMode === "focal") {
+              cropMode = stored.cropMode;
+            }
+            if (Number.isFinite(stored.fX) && Number.isFinite(stored.fY)) {
+              focalPoint = { x: stored.fX, y: stored.fY };
+            }
+
+            // New flat format (preferred): derive custom dimensions from URL if present.
+            if (stored.assetUrlCustom) {
+              const customWH = extractWHFromUrl(stored.assetUrlCustom);
+              if (customWH) {
+                customWValue = customWH.w;
+                customHValue = customWH.h;
+                lastCustomWH = customWH;
+              }
+            }
+
+            // Backward compatibility with previous nested format.
+            if (stored.custom && Number.isFinite(stored.custom.w)) {
+              customWValue = stored.custom.w;
+            }
+            if (stored.custom && Number.isFinite(stored.custom.h)) {
+              customHValue = stored.custom.h;
+            }
+            if (stored.presets && typeof stored.presets === "object") {
+              lastPresetWH = stored.presets;
+            }
+            if (stored.custom && stored.custom.w && stored.custom.h) {
+              lastCustomWH = stored.custom;
+            }
+          }
+
+          updateDisabled(element.disabled);
+          syncCropModeUI();
+          updateSize();
+
+          // Ensure previews + computed presets are (re)generated after loading.
+          loadImage();
+        });
+
+        CustomElement.onDisabledChanged(function (disabled) {
+          updateDisabled(disabled);
+          updateSize();
+        });
+
+        const mo = new MutationObserver(() => updateSize());
+        mo.observe(document.body, { childList: true, subtree: true, characterData: true });
+        window.addEventListener("resize", () => updateSize());
+
+        return true;
+      } catch (err) {
+        console.error(err);
+        isCustomElement = false;
+        return false;
+      }
+    }
+
+    async function selectAssetFromKontent() {
+      if (!window.CustomElement || typeof CustomElement.selectAssets !== "function") {
+        status.textContent = "Kontent CustomElement API not available.";
+        return;
+      }
+
+      // Config: allowMultiple + fileType ("images" or "all")
+      // See Kontent docs for selectAssets.
+      const refs = await CustomElement.selectAssets({
+        allowMultiple: false,
+        fileType: "images",
+      });
+
+      if (!refs || !Array.isArray(refs) || refs.length === 0) return;
+
+      const assetIds = refs.map((r) => r.id).filter(Boolean);
+      if (!assetIds.length) return;
+
+      const getAssetDetailsFn = CustomElement.getAssetDetails || window.getAssetDetails;
+      if (typeof getAssetDetailsFn !== "function") {
+        status.textContent = "Could not load selected asset details.";
+        return;
+      }
+
+      const details = await getAssetDetailsFn(assetIds);
+      if (!details || !details[0] || !details[0].url) return;
+
+      assetUrlInput.value = details[0].url;
+      status.textContent = "Selected asset. Loading crop previews...";
+
+      // Reset last computed values so the next refresh saves correct output.
+      lastPresetWH = {};
+      lastCustomWH = null;
+
+      loadImage();
+    }
+
+    function computeSmartWH(targetRatio, imgWidth, imgHeight) {
+      // Pick the largest (w,h) that fits inside the source image without upscaling.
+      // targetRatio is defined as w/h.
+      let w = imgWidth;
+      let h = w / targetRatio;
+      if (h > imgHeight) {
+        h = imgHeight;
+        w = h * targetRatio;
+      }
+      return { w: Math.max(1, Math.round(w)), h: Math.max(1, Math.round(h)) };
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function syncCropModeUI() {
+      cropModeButtons.forEach((btn) => {
+        const isActive = btn.dataset.cropMode === cropMode;
+        btn.classList.toggle("active", isActive);
+        btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+      });
+      const disableGuideControls = cropMode === "smart";
+      if (presetToggleList) {
+        presetToggleList.querySelectorAll("button, input").forEach((el) => {
+          el.disabled = disableGuideControls;
+        });
+      }
+      updateFocalCoordsDisplay();
+      updateCropGuide();
+    }
+
+    function updateFocalCoordsDisplay() {
+      if (!focalCoords) return;
+      if (cropMode !== "focal") {
+        focalCoords.textContent = "Focal coordinates are hidden in Smart Crop mode.";
+        return;
+      }
+      const imgW = sourceImage.naturalWidth;
+      const imgH = sourceImage.naturalHeight;
+      if (!focalPoint || !imgW || !imgH) {
+        focalCoords.textContent = "Focal point: not set";
+        return;
+      }
+      const xPct = ((focalPoint.x / imgW) * 100).toFixed(1);
+      const yPct = ((focalPoint.y / imgH) * 100).toFixed(1);
+      focalCoords.textContent = `Focal point: x=${focalPoint.x}, y=${focalPoint.y} (${xPct}%, ${yPct}%)`;
+    }
+
+    function applyCustomDimensions(nextW, nextH) {
+      const imgW = sourceImage.naturalWidth || nextW;
+      const imgH = sourceImage.naturalHeight || nextH;
+      customWValue = Math.min(Math.max(1, Math.round(nextW)), imgW);
+      customHValue = Math.min(Math.max(1, Math.round(nextH)), imgH);
+      syncCustomDimensionInputs();
+      if (typeof refreshCustomPreviewFn === "function") refreshCustomPreviewFn();
+      updateCropGuide();
+    }
+
+    function syncCustomDimensionInputs() {
+      if (customWFieldRef) customWFieldRef.value = String(customWValue);
+      if (customHFieldRef) customHFieldRef.value = String(customHValue);
+      const sideW = presetToggleList ? presetToggleList.querySelector("#guideCustomWField") : null;
+      const sideH = presetToggleList ? presetToggleList.querySelector("#guideCustomHField") : null;
+      if (sideW) sideW.value = String(customWValue);
+      if (sideH) sideH.value = String(customHValue);
+    }
+
+    function renderPresetGuideToggleList() {
+      if (!presetToggleList) return;
+      presetToggleList.innerHTML = "";
+
+      const offBtn = document.createElement("button");
+      offBtn.type = "button";
+      offBtn.className = `preset-toggle${selectedGuidePreset === "off" ? " active" : ""}`;
+      offBtn.textContent = "Off";
+      offBtn.setAttribute("aria-pressed", selectedGuidePreset === "off" ? "true" : "false");
+      offBtn.addEventListener("click", () => {
+        selectedGuidePreset = "off";
+        renderPresetGuideToggleList();
+        updateCropGuide();
+      });
+      presetToggleList.appendChild(offBtn);
+
+      RATIOS.forEach((r) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = `preset-toggle${selectedGuidePreset === r.name ? " active" : ""}`;
+        btn.textContent = r.name;
+        btn.setAttribute("aria-pressed", selectedGuidePreset === r.name ? "true" : "false");
+        btn.addEventListener("click", () => {
+          selectedGuidePreset = r.name;
+          renderPresetGuideToggleList();
+          updateCropGuide();
+        });
+        presetToggleList.appendChild(btn);
+      });
+
+      const customBtn = document.createElement("button");
+      customBtn.type = "button";
+      customBtn.className = `preset-toggle${selectedGuidePreset === "custom" ? " active" : ""}`;
+      customBtn.textContent = "Custom dimensions";
+      customBtn.setAttribute("aria-pressed", selectedGuidePreset === "custom" ? "true" : "false");
+      customBtn.addEventListener("click", () => {
+        selectedGuidePreset = "custom";
+        renderPresetGuideToggleList();
+        updateCropGuide();
+      });
+      presetToggleList.appendChild(customBtn);
+
+      const customFields = document.createElement("div");
+      customFields.className = "preset-custom-fields";
+      customFields.innerHTML = `
+        <input id="guideCustomWField" type="number" min="1" step="1" placeholder="w" value="${customWValue}" />
+        <input id="guideCustomHField" type="number" min="1" step="1" placeholder="h" value="${customHValue}" />
+      `;
+      presetToggleList.appendChild(customFields);
+
+      const guideWInput = customFields.querySelector("#guideCustomWField");
+      const guideHInput = customFields.querySelector("#guideCustomHField");
+      const syncFromGuideInputs = () => {
+        const nextW = parsePositiveInt(guideWInput.value);
+        const nextH = parsePositiveInt(guideHInput.value);
+        if (!nextW || !nextH) return;
+        customWValue = nextW;
+        customHValue = nextH;
+        syncCustomDimensionInputs();
+        if (typeof refreshCustomPreviewFn === "function") refreshCustomPreviewFn();
+        if (selectedGuidePreset === "custom") updateCropGuide();
+      };
+      guideWInput.addEventListener("change", syncFromGuideInputs);
+      guideHInput.addEventListener("change", syncFromGuideInputs);
+      guideWInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") syncFromGuideInputs();
+      });
+      guideHInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") syncFromGuideInputs();
+      });
+    }
+
+    function updateCropGuide() {
+      if (!cropGuide || !sourceImage) return;
+      if (cropMode === "smart") {
+        cropGuide.classList.remove("resizable");
+        cropGuide.style.display = "none";
+        if (presetToggleHint) {
+          presetToggleHint.textContent = "Overlay guide is disabled in Smart Crop mode.";
+        }
+        return;
+      }
+      const imgW = sourceImage.naturalWidth;
+      const imgH = sourceImage.naturalHeight;
+      const rect = sourceImage.getBoundingClientRect();
+      if (!imgW || !imgH || !rect.width || !rect.height || selectedGuidePreset === "off") {
+        cropGuide.classList.remove("resizable");
+        cropGuide.style.display = "none";
+        if (presetToggleHint) {
+          presetToggleHint.textContent = "Overlay is off.";
+        }
+        return;
+      }
+      let w;
+      let h;
+      if (selectedGuidePreset === "custom") {
+        w = Math.min(Math.max(1, Math.round(customWValue)), imgW);
+        h = Math.min(Math.max(1, Math.round(customHValue)), imgH);
+      } else {
+        const ratioDef = RATIOS.find((r) => r.name === selectedGuidePreset);
+        if (!ratioDef) {
+          cropGuide.classList.remove("resizable");
+          cropGuide.style.display = "none";
+          return;
+        }
+        const computed = computeSmartWH(ratioDef.ratio, imgW, imgH);
+        w = computed.w;
+        h = computed.h;
+      }
+
+      if (!w || !h) {
+        cropGuide.classList.remove("resizable");
+        cropGuide.style.display = "none";
+        return;
+      }
+      const origin = cropMode === "smart"
+        ? { x: Math.round((imgW - w) / 2), y: Math.round((imgH - h) / 2) }
+        : getCropOriginFromFocal(w, h, imgW, imgH);
+
+      const scaleX = rect.width / imgW;
+      const scaleY = rect.height / imgH;
+      cropGuide.style.left = `${origin.x * scaleX}px`;
+      cropGuide.style.top = `${origin.y * scaleY}px`;
+      cropGuide.style.width = `${Math.max(1, w * scaleX)}px`;
+      cropGuide.style.height = `${Math.max(1, h * scaleY)}px`;
+      cropGuide.classList.toggle("resizable", selectedGuidePreset === "custom" && cropMode === "focal");
+      cropGuide.style.display = "block";
+
+      if (presetToggleHint) {
+        const label = selectedGuidePreset === "custom" ? `Custom ${w}x${h}` : selectedGuidePreset;
+        presetToggleHint.textContent = `${label}: focal mode follows the selected focal point.`;
+      }
+    }
+
+    function getCropOriginFromFocal(cropW, cropH, imgW, imgH) {
+      const fp = focalPoint || { x: Math.floor(imgW / 2), y: Math.floor(imgH / 2) };
+      const maxX = Math.max(0, imgW - cropW);
+      const maxY = Math.max(0, imgH - cropH);
+      const x = clamp(Math.round(fp.x - cropW / 2), 0, maxX);
+      const y = clamp(Math.round(fp.y - cropH / 2), 0, maxY);
+      return { x, y };
+    }
+
+    function buildRectCropUrl(baseUrl, w, h) {
+      const url = new URL(baseUrl);
+      const imgW = sourceImage.naturalWidth;
+      const imgH = sourceImage.naturalHeight;
+      const safeW = Math.min(Math.max(1, Math.round(w)), imgW || Math.round(w));
+      const safeH = Math.min(Math.max(1, Math.round(h)), imgH || Math.round(h));
+      const { x, y } = getCropOriginFromFocal(safeW, safeH, imgW, imgH);
+      const rectValue = `${x},${y},${safeW},${safeH}`;
+      url.searchParams.set("rect", rectValue);
+      url.searchParams.delete("w");
+      url.searchParams.delete("h");
+      url.searchParams.delete("fit");
+      url.searchParams.delete("crop");
+      const encodedRect = encodeURIComponent(rectValue);
+      url.search = url.searchParams
+        .toString()
+        .replace(`rect=${encodedRect}`, `rect=${rectValue}`);
+      return url.toString();
+    }
+
+    function buildSmartCropUrl(baseUrl, w, h) {
+      const url = new URL(baseUrl);
+      url.searchParams.set("w", String(w));
+      url.searchParams.set("h", String(h));
+      url.searchParams.set("fit", "crop");
+      url.searchParams.set("crop", "smart");
+      url.searchParams.delete("rect");
+      return url.toString();
+    }
+
+    function buildCropUrl(baseUrl, w, h) {
+      return cropMode === "smart"
+        ? buildSmartCropUrl(baseUrl, w, h)
+        : buildRectCropUrl(baseUrl, w, h);
+    }
+
+    function updateFocalMarker() {
+      if (cropMode !== "focal") {
+        focalMarker.style.display = "none";
+        return;
+      }
+      const imgW = sourceImage.naturalWidth;
+      const imgH = sourceImage.naturalHeight;
+      if (!imgW || !imgH || !focalPoint) {
+        focalMarker.style.display = "none";
+        return;
+      }
+      const rect = sourceImage.getBoundingClientRect();
+      const scaleX = rect.width / imgW;
+      const scaleY = rect.height / imgH;
+      const markerX = focalPoint.x * scaleX;
+      const markerY = focalPoint.y * scaleY;
+      focalMarker.style.left = `${markerX}px`;
+      focalMarker.style.top = `${markerY}px`;
+      focalMarker.style.display = "block";
+      updateFocalCoordsDisplay();
+      updateCropGuide();
+    }
+
+    function parsePositiveInt(value) {
+      const n = parseInt(String(value).trim(), 10);
+      if (!Number.isFinite(n) || n <= 0) return null;
+      return n;
+    }
+
+    function renderResults() {
+      const baseUrl = assetUrlInput.value.trim();
+      if (!baseUrl) {
+        results.innerHTML = "";
+        status.textContent = "Please provide a valid asset URL.";
+        return;
+      }
+      const imgW = sourceImage.naturalWidth;
+      const imgH = sourceImage.naturalHeight;
+      if (!imgW || !imgH) {
+        results.innerHTML = "";
+        return;
+      }
+
+      const modeLabel = cropMode === "smart" ? "smart crops" : "focal-point crops";
+      status.textContent = `Image loaded: ${imgW}x${imgH}. Generating ${modeLabel}...`;
+      results.innerHTML = "";
+      customWFieldRef = null;
+      customHFieldRef = null;
+      refreshCustomPreviewFn = null;
+
+      lastPresetWH = {};
+      renderPresetGuideToggleList();
+
+      RATIOS.forEach((r) => {
+        const { w, h } = computeSmartWH(r.ratio, imgW, imgH);
+        const finalUrl = buildCropUrl(baseUrl, w, h);
+
+        const card = document.createElement("article");
+        card.className = "card";
+        card.innerHTML = `
+          <h3>${r.name}</h3>
+          <div>${cropMode === "smart" ? "Smart crop size" : "Crop size"}: ${w}x${h}</div>
+          <a href="${finalUrl}" target="_blank" rel="noopener noreferrer">${finalUrl}</a>
+          <div class="preview-shell">
+            <img class="preview" src="${finalUrl}" alt="${r.name} preview" />
+          </div>
+        `;
+        results.appendChild(card);
+        lastPresetWH[r.name] = { w, h, ratio: r.ratio };
+      });
+
+      const customCard = document.createElement("article");
+      customCard.className = "card";
+      customCard.innerHTML = `
+        <h3>Custom dimensions</h3>
+        <div class="controls" style="margin: 0; gap: 8px;">
+          <div>
+            <label for="customWField">w</label>
+            <input id="customWField" class="url-input" type="number" min="1" step="1" value="${customWValue}" />
+          </div>
+          <div>
+            <label for="customHField">h</label>
+            <input id="customHField" class="url-input" type="number" min="1" step="1" value="${customHValue}" />
+          </div>
+          <button id="customRefreshBtn" type="button">Refresh preview</button>
+          <div id="customMsg" class="status" style="margin: 0;"></div>
+          <a id="customLink" style="display:none;" target="_blank" rel="noopener noreferrer"></a>
+          <div class="preview-shell">
+            <img id="customImg" class="preview" style="display:none;" alt="Custom dimensions preview" />
+          </div>
+        </div>
+      `;
+
+      const wInput = customCard.querySelector("#customWField");
+      const hInput = customCard.querySelector("#customHField");
+      const refreshBtn = customCard.querySelector("#customRefreshBtn");
+      const customMsg = customCard.querySelector("#customMsg");
+      const customLink = customCard.querySelector("#customLink");
+      const customImg = customCard.querySelector("#customImg");
+
+      function refreshCustom() {
+        const customW = parsePositiveInt(wInput.value);
+        const customH = parsePositiveInt(hInput.value);
+
+        if (!customW || !customH) {
+          customMsg.textContent = "Enter positive integers for w and h.";
+          customLink.style.display = "none";
+          customImg.style.display = "none";
+          customLink.href = "";
+          customLink.textContent = "";
+          return;
+        }
+
+        const finalUrl = buildCropUrl(baseUrl, customW, customH);
+        customMsg.textContent = `${cropMode === "smart" ? "Smart crop size" : "Crop size"}: ${customW}x${customH}`;
+        customLink.href = finalUrl;
+        customLink.textContent = finalUrl;
+        customLink.style.display = "block";
+        customImg.src = finalUrl;
+        customImg.style.display = "block";
+
+        customWValue = customW;
+        customHValue = customH;
+        lastCustomWH = { w: customW, h: customH };
+        syncCustomDimensionInputs();
+        updateCropGuide();
+        scheduleSave();
+      }
+
+      customWFieldRef = wInput;
+      customHFieldRef = hInput;
+      refreshCustomPreviewFn = refreshCustom;
+
+      refreshBtn.addEventListener("click", refreshCustom);
+      wInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") refreshCustom();
+      });
+      hInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") refreshCustom();
+      });
+
+      results.appendChild(customCard);
+      refreshCustom();
+
+      updateDisabled(currentDisabled);
+      updateCropGuide();
+      updateSize();
+    }
+
+    function loadImage() {
+      const inputUrl = assetUrlInput.value.trim();
+      if (!inputUrl) {
+        status.textContent = "Please provide a valid asset URL.";
+        return;
+      }
+
+      try {
+        // Validate URL format before assigning to image src.
+        new URL(inputUrl);
+      } catch {
+        status.textContent = "Invalid URL format.";
+        return;
+      }
+
+      sourceImage.src = inputUrl;
+    }
+
+    sourceImage.addEventListener("load", () => {
+      if (!focalPoint) {
+        focalPoint = {
+          x: Math.floor(sourceImage.naturalWidth / 2),
+          y: Math.floor(sourceImage.naturalHeight / 2),
+        };
+      }
+      updateFocalMarker();
+      renderResults();
+    });
+
+    sourceImage.addEventListener("error", () => {
+      status.textContent = "Image failed to load. Check URL and CORS/access.";
+      results.innerHTML = "";
+      if (cropGuide) cropGuide.style.display = "none";
+      if (focalCoords) focalCoords.textContent = "Focal point: unavailable (image failed to load)";
+    });
+
+    sourceImage.addEventListener("click", (event) => {
+      if (guideResizeState) return;
+      if (cropMode !== "focal") return;
+      if (currentDisabled) return;
+      const rect = sourceImage.getBoundingClientRect();
+      const imgW = sourceImage.naturalWidth;
+      const imgH = sourceImage.naturalHeight;
+      if (!imgW || !imgH || !rect.width || !rect.height) return;
+
+      const localX = clamp(event.clientX - rect.left, 0, rect.width);
+      const localY = clamp(event.clientY - rect.top, 0, rect.height);
+      const naturalX = Math.round((localX / rect.width) * imgW);
+      const naturalY = Math.round((localY / rect.height) * imgH);
+      focalPoint = {
+        x: clamp(naturalX, 0, imgW),
+        y: clamp(naturalY, 0, imgH),
+      };
+
+      updateFocalMarker();
+      renderResults();
+      scheduleSave();
+    });
+
+    if (cropGuide) {
+      const guideHandles = Array.from(cropGuide.querySelectorAll(".crop-guide-handle"));
+      guideHandles.forEach((handle) => {
+        handle.addEventListener("pointerdown", (event) => {
+          if (currentDisabled) return;
+          if (cropMode !== "focal" || selectedGuidePreset !== "custom") return;
+          const corner = handle.dataset.corner || "";
+          const edge = handle.dataset.edge || "";
+          if (!corner && !edge) return;
+          const imgRect = sourceImage.getBoundingClientRect();
+          const imgW = sourceImage.naturalWidth;
+          const imgH = sourceImage.naturalHeight;
+          if (!imgRect.width || !imgRect.height || !imgW || !imgH) return;
+          guideResizeState = {
+            corner,
+            edge,
+            startClientX: event.clientX,
+            startClientY: event.clientY,
+            startW: customWValue,
+            startH: customHValue,
+            startRatio: customHValue > 0 ? customWValue / customHValue : 1,
+            imgW,
+            imgH,
+            scaleX: imgW / imgRect.width,
+            scaleY: imgH / imgRect.height,
+            pointerId: event.pointerId,
+          };
+          try {
+            handle.setPointerCapture(event.pointerId);
+          } catch {}
+          event.preventDefault();
+          event.stopPropagation();
+        });
+
+        handle.addEventListener("pointermove", (event) => {
+          if (!guideResizeState) return;
+          if (guideResizeState.pointerId !== event.pointerId) return;
+
+          const dxNatural = (event.clientX - guideResizeState.startClientX) * guideResizeState.scaleX;
+          const dyNatural = (event.clientY - guideResizeState.startClientY) * guideResizeState.scaleY;
+          let nextW = guideResizeState.startW;
+          let nextH = guideResizeState.startH;
+
+          if (guideResizeState.corner) {
+            const signX = guideResizeState.corner.includes("w") ? -1 : 1;
+            const signY = guideResizeState.corner.includes("n") ? -1 : 1;
+            const wFromX = guideResizeState.startW + signX * dxNatural;
+            const hFromY = guideResizeState.startH + signY * dyNatural;
+            const ratio = Math.max(0.0001, guideResizeState.startRatio || 1);
+            const normX = Math.abs((wFromX - guideResizeState.startW) / Math.max(1, guideResizeState.startW));
+            const normY = Math.abs((hFromY - guideResizeState.startH) / Math.max(1, guideResizeState.startH));
+            if (normX >= normY) {
+              nextW = wFromX;
+              nextH = nextW / ratio;
+            } else {
+              nextH = hFromY;
+              nextW = nextH * ratio;
+            }
+          } else if (guideResizeState.edge) {
+            if (guideResizeState.edge === "w" || guideResizeState.edge === "e") {
+              const signX = guideResizeState.edge === "w" ? -1 : 1;
+              nextW = guideResizeState.startW + signX * dxNatural;
+            } else if (guideResizeState.edge === "n" || guideResizeState.edge === "s") {
+              const signY = guideResizeState.edge === "n" ? -1 : 1;
+              nextH = guideResizeState.startH + signY * dyNatural;
+            }
+          }
+
+          applyCustomDimensions(nextW, nextH);
+          event.preventDefault();
+          event.stopPropagation();
+        });
+
+        const finishResize = (event) => {
+          if (!guideResizeState) return;
+          if (guideResizeState.pointerId !== event.pointerId) return;
+          guideResizeState = null;
+          scheduleSave();
+          try {
+            handle.releasePointerCapture(event.pointerId);
+          } catch {}
+          event.preventDefault();
+          event.stopPropagation();
+        };
+
+        handle.addEventListener("pointerup", finishResize);
+        handle.addEventListener("pointercancel", finishResize);
+      });
+    }
+
+    window.addEventListener("resize", () => {
+      updateFocalMarker();
+      updateCropGuide();
+    });
+
+    cropModeButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const nextMode = btn.dataset.cropMode === "smart" ? "smart" : "focal";
+        if (nextMode === cropMode) return;
+        cropMode = nextMode;
+        syncCropModeUI();
+        updateFocalMarker();
+        renderResults();
+        scheduleSave();
+      });
+    });
+
+    loadBtn.addEventListener("click", loadImage);
+
+    if (selectAssetBtn) {
+      selectAssetBtn.addEventListener("click", selectAssetFromKontent);
+    }
+
+    assetUrlInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        loadImage();
+      }
+    });
+
+    // Start in Kontent or as a standalone helper.
+    const kontentOk = initKontentCustomElement();
+    if (!kontentOk) {
+      syncCropModeUI();
+      renderPresetGuideToggleList();
+      loadImage();
+    }
+  </script>
+</body>
+</html>
