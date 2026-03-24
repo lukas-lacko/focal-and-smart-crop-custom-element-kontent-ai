@@ -14,10 +14,10 @@ It provides a visual workflow for selecting focal points, previewing common aspe
   - Kontent.ai asset picker).
 - Supports two crop modes:
   - **Focal Point Crop**: click image to define focus coordinates.
-  - **Smart Crop**: generates smart-crop URLs (`fit=crop&crop=smart`).
-- Generates preview links for preset ratios and custom `w/h`.
+  - **Smart Crop**: generates smart-crop URL.
+- Generates preview links for preset ratios and custom size.
 - Shows a focal marker and optional crop guide overlay in focal mode.
-- Persists results as JSON via `CustomElement.setValue(...)`.
+- Saves results as JSON to custom element's value.
 
 ## Main Features
 
@@ -65,7 +65,7 @@ Notes:
 2. Choose **Focal Point Crop** or **Smart Crop**.
 3. (Focal mode) Click image to set focal point.
 4. Inspect preset and custom previews.
-5. Front end page apps than can use the generated URLs from saved JSON fields.
+5. Front-end page(s) or app(s) then can use the generated URLs from saved JSON fields as needed.
 
 ## Tech Notes
 
