@@ -7,6 +7,10 @@ A lightweight custom element for **Kontent.ai** that helps editors generate crop
 
 It provides a visual workflow for selecting focal points, previewing common aspect ratios, and saving ready-to-use transformed asset URLs into the custom element value.
 
+## Demo GIF
+
+![Custom element demo](https://nestratsa.sk/temp/kontent/custom-focal-and-smart-crop/focal_and_smart_point_crop.gif)
+
 ## What It Does
 
 - Loads an image from:
