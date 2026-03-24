@@ -9,8 +9,6 @@ It provides a visual workflow for selecting focal points, previewing common aspe
 
 ## Demo GIF
 
-![Custom element demo](https://nestratsa.sk/temp/kontent/custom-focal-and-smart-crop/focal_and_smart_point_crop.gif)
-
 ## What It Does
 
 - Loads an image from:
