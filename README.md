@@ -11,7 +11,7 @@ It provides a visual workflow for selecting focal points, previewing common aspe
 
 - Loads an image from:
   - direct URL input, or
-  - Kontent asset picker (`CustomElement.selectAssets`).
+  - Kontent.ai asset picker (`CustomElement.selectAssets`).
 - Supports two crop modes:
   - **Focal Point Crop**: click image to define focus coordinates.
   - **Smart Crop**: generates smart-crop URLs (`fit=crop&crop=smart`).
@@ -30,8 +30,6 @@ It provides a visual workflow for selecting focal points, previewing common aspe
   - Custom overlay can be resized with handles
   - Corner resize keeps ratio; side resize changes one axis
   - Disabled in Smart Crop mode
-- Auto-save with debounce to reduce noisy writes.
-- Auto-height updates for embedded Kontent editor rendering.
 
 ## Output Value Structure
 
@@ -63,16 +61,16 @@ Notes:
 
 ## Typical Editor Flow
 
-1. Load image (paste URL or select from Kontent assets).
+1. Load image (paste URL or select from Kontent.ai assets).
 2. Choose **Focal Point Crop** or **Smart Crop**.
 3. (Focal mode) Click image to set focal point.
 4. Inspect preset and custom previews.
-5. Copy/use generated URLs from saved JSON fields.
+5. Front end page apps than can use the generated URLs from saved JSON fields.
 
 ## Tech Notes
 
 - Single-file implementation (`index.html`) with vanilla HTML/CSS/JS.
-- Uses Kontent Custom Element API (`CustomElement.init`, `setValue`, `setHeight`, `selectAssets`).
+- Uses Kontent.ai Custom Element API (`CustomElement.init`, `setValue`, `setHeight`, `selectAssets`).
 - Designed to run both:
-  - embedded in Kontent editor, and
+  - embedded in Kontent.ai editor, and
   - standalone for local testing.
